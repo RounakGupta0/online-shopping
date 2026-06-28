@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Product = require('../models/Product');
+const Cart = require('../models/Cart');
 const { protect, authorize } = require('../middleware/auth');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 
@@ -333,6 +334,55 @@ router.get('/favorites', protect, authorize('user'), async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Server error retrieving favorites list',
+      error: error.message,
+    });
+  }
+});
+
+router.delete('/profile', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        error: 'Not Found',
+      });
+    }
+
+    if (user.role === 'vendor') {
+      return res.status(400).json({
+        success: false,
+        message: 'Vendor accounts cannot be deleted directly to preserve vendor listings',
+        error: 'Bad Request',
+      });
+    }
+
+    // Clean up profile image from Cloudinary if not default
+    if (user.profilePic && !user.profilePic.includes('blank-profile-picture')) {
+      try {
+        await deleteFromCloudinary(user.profilePic);
+      } catch (err) {
+        console.error('Error deleting profile image from Cloudinary:', err);
+      }
+    }
+
+    // Clean up active shopping cart
+    await Cart.deleteOne({ user: user._id });
+
+    // Delete user from DB
+    await user.deleteOne();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Your account and associated shopping cart have been deleted successfully',
+      data: {},
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error deleting account',
       error: error.message,
     });
   }

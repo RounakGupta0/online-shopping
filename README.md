@@ -122,6 +122,7 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 | **GET** | `/user/favorites` | Yes | `user` | List current user's favorited products |
 | **POST** | `/user/favorites/:productId` | Yes | `user` | Add a product to favorites |
 | **DELETE** | `/user/favorites/:productId` | Yes | `user` | Remove a product from favorites |
+| **DELETE** | `/user/profile` | Yes | `user` | Delete account and cart (vendor deletion blocked to preserve listings) |
 
 ### Products (`/product`)
 | Method | Endpoint | Auth Required | Role | Description |

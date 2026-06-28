@@ -23,6 +23,32 @@ const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     if (decoded.role && decoded.email) {
+      // Validate that the user still exists in the database (handles deleted accounts)
+      const userExists = await User.exists({ _id: decoded.id });
+      if (!userExists) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authorization Error',
+          error: 'Unauthorized',
+        });
+      }
+
+      // Validate that if email or phone is passed in the request body, it matches the token
+      if (req.body && req.body.email && String(req.body.email).toLowerCase().trim() !== String(decoded.email).toLowerCase().trim()) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authorization Error',
+          error: 'Unauthorized',
+        });
+      }
+      if (req.body && req.body.phoneNumber && String(req.body.phoneNumber).trim() !== String(decoded.phoneNumber).trim()) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authorization Error',
+          error: 'Unauthorized',
+        });
+      }
+
       // Decode user details directly from token without DB lookup
       req.user = {
         _id: decoded.id,
@@ -40,6 +66,23 @@ const protect = async (req, res, next) => {
           error: 'Unauthorized',
         });
       }
+
+      // Validate that if email or phone is passed in the request body, it matches the loaded user
+      if (req.body && req.body.email && String(req.body.email).toLowerCase().trim() !== String(user.email).toLowerCase().trim()) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authorization Error',
+          error: 'Unauthorized',
+        });
+      }
+      if (req.body && req.body.phoneNumber && String(req.body.phoneNumber).trim() !== String(user.phoneNumber).trim()) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authorization Error',
+          error: 'Unauthorized',
+        });
+      }
+
       req.user = user;
     }
 
