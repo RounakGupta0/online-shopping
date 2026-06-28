@@ -7,10 +7,19 @@ const Cart = require('../models/Cart');
 const { protect, authorize } = require('../middleware/auth');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
-  });
+const generateToken = (user) => {
+  return jwt.sign(
+    {
+      id: user._id,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      role: user.role
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: '30d',
+    }
+  );
 };
 
 router.post('/register', async (req, res) => {
@@ -82,7 +91,7 @@ router.post('/register', async (req, res) => {
         phoneNumber: user.phoneNumber,
         profilePic: user.profilePic,
         role: user.role,
-        token: generateToken(user._id),
+        token: generateToken(user),
       },
     });
   } catch (error) {
@@ -126,7 +135,7 @@ router.post('/login', async (req, res) => {
         phoneNumber: user.phoneNumber,
         profilePic: user.profilePic,
         role: user.role,
-        token: generateToken(user._id),
+        token: generateToken(user),
       },
     });
   } catch (error) {
@@ -349,7 +358,6 @@ router.delete('/profile', protect, async (req, res) => {
       });
     }
 
-    // Clean up profile image from Cloudinary if not default
     if (user.profilePic && !user.profilePic.includes('blank-profile-picture')) {
       try {
         await deleteFromCloudinary(user.profilePic);
@@ -358,10 +366,8 @@ router.delete('/profile', protect, async (req, res) => {
       }
     }
 
-    // Clean up active shopping cart
     await Cart.deleteOne({ user: user._id });
 
-    // Delete user from DB
     await user.deleteOne();
 
     return res.status(200).json({
