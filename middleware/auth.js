@@ -22,13 +22,25 @@ const protect = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = await User.findById(decoded.id).select('-password');
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authorization Error',
-        error: 'Unauthorized',
-      });
+    if (decoded.role && decoded.email) {
+      // Decode user details directly from token without DB lookup
+      req.user = {
+        _id: decoded.id,
+        email: decoded.email,
+        phoneNumber: decoded.phoneNumber,
+        role: decoded.role,
+      };
+    } else {
+      // Fallback for older tokens that only contain ID
+      const user = await User.findById(decoded.id).select('-password');
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authorization Error',
+          error: 'Unauthorized',
+        });
+      }
+      req.user = user;
     }
 
     next();

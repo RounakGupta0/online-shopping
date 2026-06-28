@@ -6,10 +6,19 @@ const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
-  });
+const generateToken = (user) => {
+  return jwt.sign(
+    { 
+      id: user._id, 
+      email: user.email, 
+      phoneNumber: user.phoneNumber, 
+      role: user.role 
+    }, 
+    process.env.JWT_SECRET, 
+    {
+      expiresIn: '30d',
+    }
+  );
 };
 
 router.post('/register', async (req, res) => {
@@ -81,7 +90,7 @@ router.post('/register', async (req, res) => {
         phoneNumber: user.phoneNumber,
         profilePic: user.profilePic,
         role: user.role,
-        token: generateToken(user._id),
+        token: generateToken(user),
       },
     });
   } catch (error) {
@@ -125,7 +134,7 @@ router.post('/login', async (req, res) => {
         phoneNumber: user.phoneNumber,
         profilePic: user.profilePic,
         role: user.role,
-        token: generateToken(user._id),
+        token: generateToken(user),
       },
     });
   } catch (error) {
