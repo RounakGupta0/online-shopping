@@ -6,15 +6,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-/**
- * Uploads a file buffer to Cloudinary using upload_stream.
- * @param {Buffer} fileBuffer - The file buffer from req.files.file.data
- * @param {string} folder - Destination folder on Cloudinary
- * @returns {Promise<object>} - Resolves with Cloudinary API response containing secure_url
- */
 const uploadToCloudinary = (fileBuffer, folder = 'online_shopping') => {
   return new Promise((resolve, reject) => {
-    // If credentials are not configured, log a warning and return mock data for testing
     if (
       !process.env.CLOUDINARY_CLOUD_NAME ||
       process.env.CLOUDINARY_CLOUD_NAME === 'your_cloud_name'
@@ -39,16 +32,9 @@ const uploadToCloudinary = (fileBuffer, folder = 'online_shopping') => {
   });
 };
 
-/**
- * Deletes an image from Cloudinary using its secure URL.
- * Extracts the public ID from the URL and calls cloudinary.uploader.destroy.
- * @param {string} imageUrl - The secure URL of the image
- * @returns {Promise<object|null>} - Resolves with Cloudinary API response or null
- */
 const deleteFromCloudinary = async (imageUrl) => {
   if (!imageUrl || typeof imageUrl !== 'string') return null;
 
-  // Avoid trying to delete default/placeholder image or non-cloudinary image
   if (
     imageUrl.includes('pixabay.com') ||
     !imageUrl.includes('cloudinary.com')
@@ -57,25 +43,21 @@ const deleteFromCloudinary = async (imageUrl) => {
   }
 
   try {
-    // Extract public_id from Cloudinary URL
-    // Format: https://res.cloudinary.com/<cloud_name>/image/upload/<version_or_folder>/.../<public_id>.<ext>
     const parts = imageUrl.split('/upload/');
     if (parts.length < 2) return null;
 
-    const pathAfterUpload = parts[1]; // e.g. "v1620000000/online_shopping/products/prod_abc123.jpg" or "online_shopping/products/prod_abc123.jpg"
+    const pathAfterUpload = parts[1];
     const pathParts = pathAfterUpload.split('/');
-    
-    // Remove version parameter if present (starts with 'v' followed by digits)
+
     if (pathParts[0] && /^v\d+$/.test(pathParts[0])) {
       pathParts.shift();
     }
 
-    const publicIdWithExtension = pathParts.join('/'); // e.g. "online_shopping/products/prod_abc123.jpg"
-    const publicId = publicIdWithExtension.substring(0, publicIdWithExtension.lastIndexOf('.')); // e.g. "online_shopping/products/prod_abc123"
+    const publicIdWithExtension = pathParts.join('/');
+    const publicId = publicIdWithExtension.substring(0, publicIdWithExtension.lastIndexOf('.'));
 
     console.log(`Attempting to delete asset from Cloudinary: ${publicId}`);
 
-    // If credentials are mock, don't make real network call
     if (
       !process.env.CLOUDINARY_CLOUD_NAME ||
       process.env.CLOUDINARY_CLOUD_NAME === 'your_cloud_name'

@@ -6,15 +6,11 @@ const User = require('../models/User');
 const { protect, authorize } = require('../middleware/auth');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 
-// Helper to normalize file array from express-fileupload
 const getUploadedFiles = (files, fieldName) => {
   if (!files || !files[fieldName]) return [];
   return Array.isArray(files[fieldName]) ? files[fieldName] : [files[fieldName]];
 };
 
-// @route   GET /api/product
-// @desc    Get all products or search products globally (with related products)
-// @access  Public
 router.get('/', async (req, res) => {
   try {
     const { search } = req.query;
@@ -27,7 +23,6 @@ router.get('/', async (req, res) => {
     });
 
     if (search) {
-      // Global search case-insensitive regex search
       const queryRegex = new RegExp(search, 'i');
       const matchedProducts = await Product.find({
         $or: [
@@ -37,7 +32,6 @@ router.get('/', async (req, res) => {
         ],
       }).select('name price images category');
 
-      // Get categories of matched products to find related items
       const matchedCategories = [
         ...new Set(matchedProducts.map((p) => p.category)),
       ];
@@ -61,7 +55,6 @@ router.get('/', async (req, res) => {
       });
     }
 
-    // Default: return all products
     const allProducts = await Product.find({}).select('name price images');
     return res.status(200).json({
       success: true,
@@ -81,12 +74,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-// @route   GET /api/product/stock-alerts
-// @desc    Get low stock (< 10) or out of stock products
-// @access  Private (Vendor only)
 router.get('/stock-alerts', protect, authorize('vendor'), async (req, res) => {
   try {
-    const { type } = req.query; // out-of-stock, low-stock, or all
+    const { type } = req.query;
 
     let filter = {};
     if (type === 'out-of-stock') {
@@ -94,7 +84,6 @@ router.get('/stock-alerts', protect, authorize('vendor'), async (req, res) => {
     } else if (type === 'low-stock') {
       filter = { stock: { $gt: 0, $lt: 10 } };
     } else {
-      // Default: all under 10
       filter = { stock: { $lt: 10 } };
     }
 
@@ -115,9 +104,6 @@ router.get('/stock-alerts', protect, authorize('vendor'), async (req, res) => {
   }
 });
 
-// @route   GET /api/product/:id
-// @desc    Get product by ID
-// @access  Public
 router.get('/:id', async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -282,7 +268,6 @@ router.put('/:id', protect, authorize('vendor'), async (req, res) => {
       updateData.stock = parsedStock;
     }
 
-    // Process new images if uploaded
     const newImageFiles = getUploadedFiles(req.files, 'images');
     if (newImageFiles.length > 0) {
       if (newImageFiles.length > 5) {
@@ -329,9 +314,6 @@ router.put('/:id', protect, authorize('vendor'), async (req, res) => {
   }
 });
 
-// @route   PATCH /api/product/:id/images
-// @desc    Selectively delete or add/append product images
-// @access  Private (Vendor only)
 router.patch('/:id/images', protect, authorize('vendor'), async (req, res) => {
   try {
     const { imagesToDelete } = req.body;
@@ -353,7 +335,6 @@ router.patch('/:id/images', protect, authorize('vendor'), async (req, res) => {
       });
     }
 
-    // 1. Determine which images are to be deleted
     let urlsToDelete = [];
     if (imagesToDelete) {
       if (Array.isArray(imagesToDelete)) {
@@ -368,13 +349,10 @@ router.patch('/:id/images', protect, authorize('vendor'), async (req, res) => {
       }
     }
 
-    // Filter out empty entries and ensure they exist in product's images
     urlsToDelete = urlsToDelete.filter(url => url && product.images.includes(url));
 
-    // 2. Process new images if uploaded
     const newImageFiles = getUploadedFiles(req.files, 'images');
 
-    // 3. Validate image count bounds (between 1 and 5)
     const newCount = product.images.length - urlsToDelete.length + newImageFiles.length;
     if (newCount < 1) {
       return res.status(400).json({
@@ -391,14 +369,11 @@ router.patch('/:id/images', protect, authorize('vendor'), async (req, res) => {
       });
     }
 
-    // 4. Delete the selected images from Cloudinary
     if (urlsToDelete.length > 0) {
       await Promise.all(urlsToDelete.map(url => deleteFromCloudinary(url)));
-      // Remove from product.images
       product.images = product.images.filter(img => !urlsToDelete.includes(img));
     }
 
-    // 5. Upload new images to Cloudinary and append
     if (newImageFiles.length > 0) {
       const uploadedUrls = [];
       for (const file of newImageFiles) {
@@ -433,9 +408,6 @@ router.patch('/:id/images', protect, authorize('vendor'), async (req, res) => {
   }
 });
 
-// @route   DELETE /api/product/:id
-// @desc    Delete a product
-// @access  Private (Vendor only)
 router.delete('/:id', protect, authorize('vendor'), async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -447,7 +419,6 @@ router.delete('/:id', protect, authorize('vendor'), async (req, res) => {
       });
     }
 
-    // Ensure vendor owns product
     if (product.vendor.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -458,21 +429,17 @@ router.delete('/:id', protect, authorize('vendor'), async (req, res) => {
 
     await product.deleteOne();
 
-    // Clean up associated data after successful product deletion
-    // 1. Delete product images from Cloudinary
     if (product.images && product.images.length > 0) {
       Promise.all(product.images.map(imgUrl => deleteFromCloudinary(imgUrl))).catch(err => {
         console.error('Error deleting product images from Cloudinary:', err);
       });
     }
 
-    // 2. Remove from user carts
     await Cart.updateMany(
       { 'items.product': product._id },
       { $pull: { items: { product: product._id } } }
     );
 
-    // 3. Remove from user favorites
     await User.updateMany(
       { favorites: product._id },
       { $pull: { favorites: product._id } }

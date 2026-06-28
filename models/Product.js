@@ -52,7 +52,6 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-// Virtual field for default thumbnail
 productSchema.virtual('thumbnail').get(function () {
   return this.images && this.images.length > 0 ? this.images[0] : null;
 });

@@ -6,16 +6,12 @@ const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 
-// Helper to generate JWT token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: '30d',
   });
 };
 
-// @route   POST /api/user/register
-// @desc    Register a user or vendor
-// @access  Public
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, phoneNumber } = req.body;
@@ -28,7 +24,6 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Check duplicate email
     const emailExists = await User.findOne({ email });
     if (emailExists) {
       return res.status(400).json({
@@ -38,7 +33,6 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Check duplicate phone number
     const phoneExists = await User.findOne({ phoneNumber });
     if (phoneExists) {
       return res.status(400).json({
@@ -48,11 +42,9 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Check if email matches vendor email
     const vendorEmail = process.env.VENDOR_EMAIL || 'rounak@gmail.com';
     const role = email.toLowerCase() === vendorEmail.toLowerCase() ? 'vendor' : 'user';
 
-    // File Upload handling (Profile Picture)
     let profilePic;
     if (req.files && req.files.profilePic) {
       try {
@@ -102,9 +94,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// @route   POST /api/user/login
-// @desc    Authenticate user/vendor & get token
-// @access  Public
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -149,9 +138,6 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// @route   GET /api/user/profile
-// @desc    Get user profile
-// @access  Private
 router.get('/profile', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
@@ -170,9 +156,6 @@ router.get('/profile', protect, async (req, res) => {
   }
 });
 
-// @route   PUT /api/user/profile
-// @desc    Update user profile (name, phone, profile pic)
-// @access  Private
 router.put('/profile', protect, async (req, res) => {
   try {
     const { name, phoneNumber } = req.body;
@@ -208,8 +191,7 @@ router.put('/profile', protect, async (req, res) => {
           'online_shopping/profiles'
         );
         user.profilePic = uploadRes.secure_url;
-        
-        // Delete old profile picture from Cloudinary if it exists
+
         if (oldProfilePic) {
           await deleteFromCloudinary(oldProfilePic);
         }
@@ -246,9 +228,6 @@ router.put('/profile', protect, async (req, res) => {
   }
 });
 
-// @route   POST /api/user/favorites/:productId
-// @desc    Add product to user's favorites
-// @access  Private (User only)
 router.post('/favorites/:productId', protect, authorize('user'), async (req, res) => {
   try {
     const product = await Product.findById(req.params.productId);
@@ -262,7 +241,6 @@ router.post('/favorites/:productId', protect, authorize('user'), async (req, res
 
     const user = await User.findById(req.user._id);
 
-    // Check if already favorited
     if (user.favorites.includes(product._id)) {
       return res.status(400).json({
         success: false,
@@ -289,9 +267,6 @@ router.post('/favorites/:productId', protect, authorize('user'), async (req, res
   }
 });
 
-// @route   DELETE /api/user/favorites/:productId
-// @desc    Remove product from user's favorites
-// @access  Private (User only)
 router.delete('/favorites/:productId', protect, authorize('user'), async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -324,9 +299,6 @@ router.delete('/favorites/:productId', protect, authorize('user'), async (req, r
   }
 });
 
-// @route   GET /api/user/favorites
-// @desc    Get user's favorites list
-// @access  Private (User only)
 router.get('/favorites', protect, authorize('user'), async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate('favorites');

@@ -4,7 +4,6 @@ const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
 
-// Helper to get or create cart
 const getOrCreateCart = async (userId) => {
   let cart = await Cart.findOne({ user: userId });
   if (!cart) {
@@ -13,9 +12,6 @@ const getOrCreateCart = async (userId) => {
   return cart;
 };
 
-// @route   GET /api/cart
-// @desc    Get current user's cart
-// @access  Private (User only)
 router.get('/', protect, authorize('user'), async (req, res) => {
   try {
     const cart = await getOrCreateCart(req.user._id);
@@ -35,9 +31,6 @@ router.get('/', protect, authorize('user'), async (req, res) => {
   }
 });
 
-// @route   POST /api/cart
-// @desc    Add product to cart or update its quantity
-// @access  Private (User only)
 router.post('/', protect, authorize('user'), async (req, res) => {
   try {
     const { productId, quantity } = req.body;
@@ -74,7 +67,6 @@ router.post('/', protect, authorize('user'), async (req, res) => {
     );
 
     if (qty <= 0) {
-      // If quantity is <= 0, remove the product from the cart list
       if (itemIndex > -1) {
         cart.items.splice(itemIndex, 1);
         await cart.save();
@@ -87,7 +79,6 @@ router.post('/', protect, authorize('user'), async (req, res) => {
       });
     }
 
-    // Check if quantity exceeds available stock (optional validation before adding to cart)
     if (product.stock < qty) {
       return res.status(400).json({
         success: false,
@@ -97,10 +88,8 @@ router.post('/', protect, authorize('user'), async (req, res) => {
     }
 
     if (itemIndex > -1) {
-      // Update quantity
       cart.items[itemIndex].quantity = qty;
     } else {
-      // Add new item
       cart.items.push({ product: productId, quantity: qty });
     }
 
@@ -122,9 +111,6 @@ router.post('/', protect, authorize('user'), async (req, res) => {
   }
 });
 
-// @route   DELETE /api/cart/:productId
-// @desc    Remove an item from cart
-// @access  Private (User only)
 router.delete('/:productId', protect, authorize('user'), async (req, res) => {
   try {
     const cart = await getOrCreateCart(req.user._id);
@@ -159,9 +145,6 @@ router.delete('/:productId', protect, authorize('user'), async (req, res) => {
   }
 });
 
-// @route   DELETE /api/cart
-// @desc    Clear entire cart
-// @access  Private (User only)
 router.delete('/', protect, authorize('user'), async (req, res) => {
   try {
     const cart = await getOrCreateCart(req.user._id);
