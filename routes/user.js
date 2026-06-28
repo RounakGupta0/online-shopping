@@ -158,7 +158,7 @@ router.get('/profile', protect, async (req, res) => {
 
 router.put('/profile', protect, async (req, res) => {
   try {
-    const { name, phoneNumber } = req.body;
+    const { name, phoneNumber, email } = req.body;
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -171,8 +171,20 @@ router.put('/profile', protect, async (req, res) => {
 
     if (name) user.name = name;
 
-    if (phoneNumber && phoneNumber !== user.phoneNumber) {
-      const phoneExists = await User.findOne({ phoneNumber });
+    if (email && String(email).toLowerCase().trim() !== String(user.email).toLowerCase().trim()) {
+      const emailExists = await User.findOne({ email: String(email).toLowerCase().trim() });
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'An account with this email is already registered',
+          error: 'Conflict',
+        });
+      }
+      user.email = String(email).toLowerCase().trim();
+    }
+
+    if (phoneNumber && String(phoneNumber).trim() !== String(user.phoneNumber).trim()) {
+      const phoneExists = await User.findOne({ phoneNumber: String(phoneNumber).trim() });
       if (phoneExists) {
         return res.status(400).json({
           success: false,
@@ -180,7 +192,7 @@ router.put('/profile', protect, async (req, res) => {
           error: 'Conflict',
         });
       }
-      user.phoneNumber = phoneNumber;
+      user.phoneNumber = String(phoneNumber).trim();
     }
 
     if (req.files && req.files.profilePic) {
