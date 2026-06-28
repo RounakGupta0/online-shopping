@@ -6,7 +6,7 @@ const protect = async (req, res, next) => {
 
   if (
     req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
+    req.headers.authorization.toLowerCase().startsWith('bearer')
   ) {
     token = req.headers.authorization.split(' ')[1];
   }
@@ -14,7 +14,7 @@ const protect = async (req, res, next) => {
   if (!token) {
     return res.status(401).json({
       success: false,
-      message: 'Not authorized, no token provided',
+      message: 'Authorization Error',
       error: 'Unauthorized',
     });
   }
@@ -26,7 +26,7 @@ const protect = async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
-        message: 'User belonging to this token no longer exists',
+        message: 'Authorization Error',
         error: 'Unauthorized',
       });
     }
@@ -36,7 +36,7 @@ const protect = async (req, res, next) => {
     console.error('JWT verification error:', error);
     return res.status(401).json({
       success: false,
-      message: 'Not authorized, token failed',
+      message: 'Authorization Error',
       error: 'Unauthorized',
     });
   }

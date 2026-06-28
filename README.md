@@ -118,7 +118,7 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 | **POST** | `/user/register` | No | Any | Register a new user. Registers as a `vendor` if email matches `VENDOR_EMAIL` |
 | **POST** | `/user/login` | No | Any | Authenticate user and return a JWT |
 | **GET** | `/user/profile` | Yes | Any | Retrieve authenticated user profile |
-| **PUT** | `/user/profile` | Yes | Any | Update name, phone, or upload profile photo |
+| **PUT** | `/user/profile` | Yes | Any | Update name, email, or phone number (checks for duplicate conflicts) |
 | **GET** | `/user/favorites` | Yes | `user` | List current user's favorited products |
 | **POST** | `/user/favorites/:productId` | Yes | `user` | Add a product to favorites |
 | **DELETE** | `/user/favorites/:productId` | Yes | `user` | Remove a product from favorites |
